@@ -6,12 +6,14 @@
  * i use the following terms to classify pp token sequences.
  *
  * active:
- *   a token sequence that may invoke macros when scanned.
+ *   any token sequence. in particular, it may invoke macros when scanned.
+ * portable-active:
+ *   a non-empty active that does not contain unbalanced parens nor
+ *   open commas.
  * value:
  *   a token sequence that contains no macro invocations.
  * portable:
- *   a non-empty value that does not contain unbalanced parens nor
- *   open commas.
+ *   a portable-active that is also a value.
  * tuple:
  *   zero or more portables separated by commas, and surrounded by a
  *   pair of parens. examples of tuples include "(a)" and
@@ -25,6 +27,8 @@
  * N-ary sequence:
  *   one or more N-ary tuples, placed side-by-side. an unary sequence
  *   is simply called a sequence.
+ * word:
+ *   an identifier or a pp-number.
  */
 
 # define BFI_EMPTY()
@@ -133,16 +137,18 @@
 # define BFI_AND(x, y) BFI_IF(x)(y, 0)
 
 /* BFI_SWITCH((t, default))
- *     t : active
- *     default : active
+ *     t : portable-active
+ *     default : portable-active
  *   performs general conditional choice.
- *   default must expand to a portable. t must either expand to a
- *   portable, or expand intermediately to an active of the form
- *   "a BFI_TEST_SUCCESS(v) b", where v is an active that expands to a
- *   portable, a is a portable or is empty, and b is an active that
- *   contains no unbalanced parentheses or open commas. in the latter
- *   case, BFI_SWITCH expands to the expansion of v. otherwise, it
- *   expands to the expansion of default.
+ *   'default' must expand to a portable. 't' must expand to one of the
+ *   following:
+ *
+ *   - a portable. in this case, BFI_SWITCH expands to the expansion of
+ *     'default'
+ *   - an active of the form 'a BFI_TEST_SUCCESS(v) b', where 'v' is an active
+ *     that expands to a portable, 'a' is a portable or is empty, and 'b' is a
+ *     portable-active. in this case, BFI_SWITCH expands to the expansion of
+ *     'v'.
  *
  * # define CASE_0 BFI_TEST_SUCCESS(zero)
  * # define CASE_1 BFI_TEST_SUCCESS(one)
@@ -273,17 +279,16 @@
 
 /* Symbols
  *
- * a symbol is an identifier or pp-number x, for which an identity
- * macro named BFI_SYM_##x is defined. symbols can be tested for
- * equality.
+ * a symbol is a word X for which an identity macro named BFI_SYM_##X is defined.
+ * symbols can be tested for equality.
  *
- * BFI_SYMP(x); x : identifier or pp-number
+ * BFI_SYMP(x); x : word
  *   tests if x is a symbol.
  * BFI_SYM_EQ(x, y); x, y : symbol
  *   tests if x is equal to y.
  * BFI_SYM_MATCH(x, y)
  *     x : symbol
- *     y : identifier or pp-number
+ *     y : word
  *   tests whether y matches x. that is, y is a symbol that is equal
  *   to x.
  *

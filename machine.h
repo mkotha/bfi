@@ -1,9 +1,131 @@
 # ifndef BFI_MACHINE_H
 # define BFI_MACHINE_H
 
-/* Continuation machine.
- * See Chaos Preprocessor Library for the idea.
+/*** The Continuation Machine
+ *
+ * The continuation machine is a virtual machine implemented on top of CPP.
+ * Its primary purpose is to emulate loop and recursion in an efficient way.
+ * It has the following components:
+ *
+ * - The A register. It contains one or more portables.
+ * - The instruction register. It contains a continuation machine instruction.
+ * - The stack. It is a list of stack frames. Each stack frame is a pair of
+ *   a portable and a word (usually an instruction).
+ * - The output buffer. It contains a portable or the empty token sequence.
+ *
+ * An instruction is a word X for which a macro called BFI_FINST_##X is
+ * defined. This macro is called the accompanying macro of X.
+ *
+ * Execution of the machine proceeds as follows:
+ *
+ * 1. The A register and the instruction register are initialized with the
+ *  values given by the user. The stack is initialized to a 2-element list
+ *  whose top frame is the pair (~, 6stop) and whose bottom frame is
+ *  unspecified. The output buffer is initialized to the empty token sequence.
+ * 2. Repeat a single-step update.
+ * 3. When the instruction register contains the sepcial instruction 6stop,
+ *  the machine stops, and the contents of the A register and the output
+ *  buffer are returned from the machine.
+ * 4. When the number of executed instruction exceeds a limit, the machine
+ *  aborts by causing a CPP error. The limit is roughly 2**33.
+ *
+ * The single-step update is defined as follows:
+ *
+ * 1. The accompanying macro of the content of the instruction register is
+ *  called in the following form:
+ *
+ *  am(f, v_1, ... v_N, d, t)
+ *
+ *  where 'am' is the acompanying macro, 'f' is some word, 'v_1' through 'v_N'
+ *  are the portables in the A register, 'd' is the portable component of the
+ *  top frame of the stack, and 't' is the word component of the top frame.
+ *
+ *  For this to be a valid call, 'am' must be a (N+3)-ary macro, where N is
+ *  the number of portables in the A register.
+ *
+ *  This call is required to produce a token sequence of the following form:
+ *
+ *  o f(new_v, i, p
+ *
+ *  where 'o' an optional portable, 'new_v' is a portable-active which expands
+ *  to a comma-separated list of one or more portables, 'i' is a word, and 'p'
+ *  is a portable-active whose expansion has the form:
+ *
+ *  , push_1 ... push_K
+ *
+ *  where each 'push_i' is an active of the form:
+ *
+ *  e, w))
+ *
+ *  where 'e' is a portable-active which expands to a portable, and 'w' is
+ *  a word. Here K can be any non-negative integer.
+ *
+ * 2. The machine state is updated as follows:
+ *
+ *  - The A register contains the portables in the list 'new_v' expands to.
+ *  - The instruction register contains 'i'.
+ *  - The top frame of the stack is removed. Then each 'push_i' is pushed to the
+ *    stack, where 'push_1' is pushed last and becomes the new top of the
+ *    stack.
+ *  - 'o' is appended to the output buffer.
+ *
+ * Remarks:
+ *
+ *  - An instruction can "call" itself by simply arranging that it is placed in
+ *    the instruction register, immediately or at some later step. This does
+ *    not cause a macro calling itself, because an instruction and its
+ *    accompanying macro are different tokens.
+ *  - Exactly one frame is popped from the stack in each step, whereas any
+ *    number of frames can be pushed.
+ *  - Stack popping is automatic, but you can cancel out the effect by pushing
+ *    back the popped frame.
+ *
+ * The basic idea of continuation machine was taken from the Chaos and the
+ * Order preprocessor libraries.
  * http://www.sourceforge.net/projects/chaos-pp/
+ */
+
+/*** The Calling Convention
+ *
+ * One calling convention is used throughout the BF interpreter. The machine
+ * itself is largely agnostic of it, but the initial placement of 6stop on
+ * the stack is compatible with this convention; when the first
+ * instruction "returns", the machine exits and returns the "return value".
+ *
+ * - A function is represented as an instruction. A continuation (i.e. a point
+ *   to which a function returns) is represented as a pair of an instruction
+ *   and a portable called "environment".
+ * - To call a function, do the following:
+ *    + Place the instruction for the function in the instruction register.
+ *    + Push a stack frame whose word component is the word component of
+ *      the previous top stack frame, and whose portable component is the
+ *      environment for the continuation.
+ *    + Push another stack frame whose word component is the instruction
+ *      for the continuation, and whose portable component is the first
+ *      argument to the function.
+ *    + Place the rest of the arguments in the A register.
+ *  - To return from a function, do the following:
+ *    + Place the return values in the A register.
+ *    + Place the word component of the previous top stack frame in the
+ *      instruction register.
+ *  - There are other variants of function calls. Instead of pushing one
+ *    continuation to the stack, you can push zero or multiple continuations.
+ *    Pushing no continuation corresponds means a tail call. Pushing multiple
+ *    continuations is useful when you want to apply a series of operations
+ *    to the content of the A register.
+ *
+ *  Note that if an instruction for a continuation is stored in the Nth stack
+ *  frame, the corresponding environment is stored in the (N+1)th stack frame.
+ */
+
+/*** Rationale
+ *
+ * Much of the strangeness of the machine's instruction interface comes from
+ * efficiency requirements. In particular the current implementation ensures:
+ *
+ * - The content of the A register is scanned (by CPP) only twice per step.
+ * - The content of the stack is scanned less than once in 10 steps on average.
+ * - Any part of the output buffer is scanned only O(log(steps)) times.
  */
 
 # include "util.h"
