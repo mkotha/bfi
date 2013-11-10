@@ -3,6 +3,13 @@
 
 # include "util.h"
 
+/* BFI_FORMAT_PRETTY(seq)
+ *    seq : sequence of octets with 0eof at the end
+ *  Pretty-print 'seq' by interpreting it as an ASCII string.
+ *
+ *  BFI_FORMAT_PRETTY((0x66)(0x6f)(0x6f)(0x2b)(0x62)(0x61)(0x72)(0eof))
+ *    => foo+bar
+ */
 # define BFI_FORMAT_PRETTY(seq) BFI_FORMAT_PRETTY_I(BFI_SEQ_TO_GUIDE(seq))
 # define BFI_FORMAT_PRETTY_I(g) BFI_FORMAT_PRETTY_LOOP(0, ~, g
 # define BFI_FORMAT_PRETTY_LOOP(hold, val, ch, c) BFI_IF(c)(BFI_FORMAT_PRETTY_CONT, BFI_EAT_3)(hold, val, BFI_FORMAT_PRETTY_SHOW_##ch
