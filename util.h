@@ -31,6 +31,8 @@
  *   an identifier or a pp-number.
  */
 
+/* nullary constant macros
+ */
 # define BFI_EMPTY()
 # define BFI_COMMA() ,
 # define BFI_LPAREN() (
@@ -39,24 +41,28 @@
 # define BFI_HASH() BFI_HASH_I
 # define BFI_HASH_I #
 
-/* DEEER(f); f : callable
+/* BFI_DEFER(f); f : callable
  *   returns f, disabling its invocation temporarily.
+ *
+ * BFI_DEFER(BFI_ID)(x) => BFI_ID(x)
  */
 # define BFI_DEFER(f) f BFI_EMPTY()
 # define BFI_DEFER_1(f) f BFI_DEFER(BFI_EMPTY)()
 
+/* macros that expand to nothing
+ */
 # define BFI_EAT(x)
 # define BFI_EAT_2(x, x1)
 # define BFI_EAT_3(x, x1, x2)
 
+/* produce comma-separated list
+ */
 # define BFI_REM(x) x
 # define BFI_REM_2(x, x1) x, x1
 # define BFI_REM_3(x, x1, x2) x, x1, x2
 # define BFI_REM_4(x, x1, x2, x3) x, x1, x2, x3
 
 # define BFI_SWAP(x, y) (y, x)
-
-# define BFI_ID(x) x
 
 /* BFI_CAT(x, y); x, y : portable
  *   concatenates x and y, pasting the last token of x and the first
@@ -69,6 +75,10 @@
  *   arguments.
  */
 # define BFI_PCAT(x, y) x ## y
+
+/* selector macros */
+
+# define BFI_ID(x) x
 
 # define BFI_FST(x, y) x
 # define BFI_SND(x, y) y
@@ -108,8 +118,14 @@
 # define BFI_CALL_BEGIN_2C(f, x1, x2) f(x1, x2,
 # define BFI_CALL_BEGIN_3C(f, x1, x2, x3) f(x1, x2, x3,
 
+/* BFI_CALL_BEGIN(n)(f, args...) moreargs...)
+ *    n : call pattern
+ *    f : callable
+ * generic macro over BFI_CALL_BEGIN_* macros.
+ */
 # define BFI_CALL_BEGIN_(n) BFI_CALL_BEGIN_##n
 
+/* create a tuple */
 # define BFI_TUPLE(x) (x)
 # define BFI_TUPLE_2(x0, x1) (x0,x1)
 
@@ -129,10 +145,22 @@
 
 # define BFI_UNLESS(b) BFI_WHEN(BFI_NOT(b))
 
+/* BFI_IFC(b)((n)(f,x...), (m)(g,y...)) args...)
+ *    b : 0 or 1
+ *    n, m : call pattern (see BFI_CALL_BEGIN_)
+ *    f, g : callable
+ *  begin a differnt call depending on the value of b.
+ *
+ *  BFI_IFC(0)((0)(FOO), (2C)(BAR,a,b)) z)
+ *    => FOO(z)
+ *  BFI_IFC(1)((0)(FOO), (2C)(BAR,a,b)) z)
+ *    => BAR(a, b, z)
+ */
 # define BFI_IFC(b) BFI_PCAT(BFI_IFC_, b)
 # define BFI_IFC_1(x, y) BFI_CALL_BEGIN_ x
 # define BFI_IFC_0(x, y) BFI_CALL_BEGIN_ y
 
+/* logical operators */
 # define BFI_NOT(b) BFI_IF(b)(0, 1)
 # define BFI_AND(x, y) BFI_IF(x)(y, 0)
 
@@ -147,8 +175,8 @@
  *     'default'
  *   - an active of the form 'a BFI_TEST_SUCCESS(v) b', where 'v' is an active
  *     that expands to a portable, 'a' is a portable or is empty, and 'b' is a
- *     portable-active. in this case, BFI_SWITCH expands to the expansion of
- *     'v'.
+ *     portable-active or is empty. in this case, BFI_SWITCH expands to the
+ *     expansion of 'v'.
  *
  * # define CASE_0 BFI_TEST_SUCCESS(zero)
  * # define CASE_1 BFI_TEST_SUCCESS(one)
@@ -164,6 +192,11 @@
 
 # define BFI_TEST_SUCCESS(v) ~, v) BFI_EAT_2(~
 
+/* BFI_IFN(x)(t, f)
+ *    x, t, f : value
+ *  if x begins with a nullary tuple, expands to t, otherwise expands to f.
+ *  x must not begin with a tuple whose arity is not 0.
+ */
 # define BFI_IFN(x) BFI_SWITCH((BFI_NULLARY_TEST_D x, BFI_IF_0))
 # define BFI_NULLARY_TEST_D() BFI_TEST_SUCCESS(BFI_IF_1)
 
