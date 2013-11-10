@@ -3,6 +3,36 @@
 
 # include "util.h"
 
+/* BFI_LEX(src)
+ *    src : portable
+ *  Transforms each token in 'src' into an octet. Then returns a sequence of the
+ *  octets, followed by 0eof. If 'src' contains the token 0eof, the sequence is
+ *  truncated before its first occurrence.
+ *
+ *  Only a limited set of tokens can appear in 'src':
+ *  - An octet (0x00 0x01 ...). It is transformed to itself.
+ *  - A single-letter word (a b A B 0 1 _ ...). It is transformed to its ASCII
+ *    representation.
+ *  - A parenthesis. The closing parenthesis is not allowed to appear
+ *    immediately after an opening parenthesis. It is transformed to its ASCII
+ *    representation.
+ *  - A special abbreviation word. Search this file for 'Abbrev words' for
+ *    the list of allowed tokens.
+ *  - 0eof. It signals the end of input.
+ *
+ *  BFI_LEX(F o o)
+ *    => (0x46)(0x6f)(0x6f)(0eof)
+ *  BFI_LEX(0x01 0x02 0x03)
+ *    => (0x01)(0x02)(0x03)(0eof)
+ *  BFI_LEX(f(a 0comma b))
+ *    => (0x66)(0x28)(0x61)(0x2c)(0x62)(0x29)(0eof)
+ *  BFI_LEX(0eof)
+ *    => (0eof)
+ *  BFI_LEX(a b 0eof c d)
+ *    => (0x61)(0x62)(0eof)
+ *  BFI_LEX((((0eof))))
+ *    => (0x28)(0x28)(0x28)(0eof)
+ */
 # define BFI_LEX(src) BFI_LEX_RAW(src)
 # define BFI_LEX_RAW(src) BFI_RENDER_CLEAN(BFI_FMACHINE_O(~, 6lex, src 0eof))
 # define BFI_FINST_6lex(f, _, v, t) BFI_IF(BFI_UNARYP(v))(BFI_LEX_PARENED, BFI_LEX_I)(f, v, BFI_PCAT(BFI_TOKEN, v))BFI_PUSH(t)
@@ -10,6 +40,8 @@
 # define BFI_LEX_CALL(f, o) BFI_ID(o)f(
 # define BFI_LEX_PARENED(f, v, _) (()(0x28)BFI_EMPTY)f(~, 6lex, BFI_PASS_AUX BFI_TAKE_PREFIX(v) 0end_of_sequence_marker BFI_PUSH(6lex_resume) 0x29 BFI_EAT v
 # define BFI_FINST_6lex_resume(f, r, v, t) BFI_IF(r)(BFI_FINST_6lex, BFI_FINST_6id)(f, r, v, t)
+
+/* Token recognizers for octets */
 
 # define BFI_TOKEN0x00 BFI_LEX_SUCCESS(()(0x00)BFI_EMPTY)
 # define BFI_TOKEN0x01 BFI_LEX_SUCCESS(()(0x01)BFI_EMPTY)
@@ -268,6 +300,8 @@
 # define BFI_TOKEN0xfe BFI_LEX_SUCCESS(()(0xfe)BFI_EMPTY)
 # define BFI_TOKEN0xff BFI_LEX_SUCCESS(()(0xff)BFI_EMPTY)
 
+/* Token recognizers for single-letter words */
+
 # define BFI_TOKEN0 BFI_TOKEN0x30
 # define BFI_TOKEN1 BFI_TOKEN0x31
 # define BFI_TOKEN2 BFI_TOKEN0x32
@@ -335,6 +369,8 @@
 
 # define BFI_TOKEN_ BFI_TOKEN0x5f
 
+/* Token recognizers for Abbrev words */
+
 # define BFI_TOKEN0_0 BFI_TOKEN0x00
 # define BFI_TOKEN0_a BFI_TOKEN0x07
 # define BFI_TOKEN0_b BFI_TOKEN0x08
@@ -376,6 +412,8 @@
 # define BFI_TOKEN0bar BFI_TOKEN0x7c
 # define BFI_TOKEN0rbrace BFI_TOKEN0x7d
 # define BFI_TOKEN0tilde BFI_TOKEN0x7e
+
+/* Token recognizers for special tokens */
 
 # define BFI_TOKEN0eof (()(0eof)BFI_EMPTY))0, 6id, BFI_DEFER(BFI_COMMA)() 0eof
 # define BFI_TOKEN0end_of_sequence_marker (()BFI_EMPTY))1, 6id, BFI_DEFER(BFI_COMMA)() 0eof

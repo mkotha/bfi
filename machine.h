@@ -135,13 +135,19 @@
 
 /* BFI_FMACHINE_O(v, f, d)
  * BFI_FMACHINE_V(v, f, d)
- *    v : value
+ *    v : portable
  *    f : instruction
- *    d : value
+ *    d : portable
  *  Run the continuation machine. The A register is initialized to 'v',
  *  the instruction register to 'f', and the stack top to ('d', 6stop).
  *  BFI_FMACHINE_O returns the content of the output buffer.
  *  BFI_FMACHINE_V returns the content of the A register.
+ *
+ *  These macros are not reentrant. This means that if a macro is implemented
+ *  using the continuation machine, it cannot be used to implement a
+ *  continuation machine instruction. Usually you can work around this
+ *  limitation by using the underlying instruction directly, rather than using
+ *  the macro that wraps the instruction.
  */
 # define BFI_FMACHINE_O(v, f, d) BFI_FMACHINE_G(BFI_LEFT, v, f, d)()
 # define BFI_FMACHINE_V(v, f, d) BFI_FMACHINE_G(BFI_RIGHT, v, f, d)
