@@ -29,8 +29,8 @@
  *  buffer are returned from the machine.
  * 4. When the stack is empty and the instruction register does not contain
  *  6stop, the behavior is undefined.
- * 5. When the number of executed instruction exceeds a limit, the machine
- *  aborts by causing a CPP error. The limit is roughly 2**33.
+ * 5. When the number of executed slow steps (defined below) exceeds a limit,
+ *  the machine aborts by causing a CPP error. The limit is roughly 2**33.
  *
  * The single-step update is defined as follows:
  *
@@ -46,38 +46,54 @@
  *  For this to be a valid call, 'am' must be a (N+3)-ary macro, where N is
  *  the number of portables in the A register.
  *
- *  This call is required to produce a token sequence of the following form:
+ *  This call is required to produce a token sequence of one of the two forms:
  *
- *  o f(new_v, i, p
+ *  - SLOW FORM
  *
- *  where 'o' an optional portable, 'new_v' is a portable-active which expands
- *  to a comma-separated list of one or more portables, 'i' is an instruction,
- *  and 'p' is a portable-active whose expansion has the form:
+ *    o f(new_v, i, p
  *
- *  , push_1 ... push_K
+ *    where 'o' is an optional portable, 'new_v' is a portable-active which
+ *    expands to a comma-separated list of one or more portables ('new_v_1'
+ *    through 'new_v_M'), 'i' is an instruction, and 'p' is a portable-active
+ *    whose expansion has the form:
  *
- *  where each 'push_i' is an active of the form:
+ *    , push_1 ... push_K
  *
- *  e, w))
+ *    where each 'push_i' is an active of the form:
  *
- *  where 'e' is a portable-active which expands to a portable, and 'w' is
- *  a word. Here K can be any non-negative integer.
+ *    e, w))
+ *
+ *    where 'e' is a portable-active which expands to a portable, and 'w' is
+ *    a word. Here K can be any non-negative integer.
+ *
+ *  - FAST FORM
+ *
+ *    o new_am(f, new_v_1, ... new_v_M, BFI_EMPTY(
+ *
+ *    where 'o' is an optional portable, 'new_am' is the accompanying macro of
+ *    some instruction ('i'), and 'new_v_1' through 'new_v_M' are actives that
+ *    expand to a portable. In this form, 'new_am' and 'am' must be distinct
+ *    macro names.
  *
  * 2. The machine state is updated as follows:
  *
- *  - The A register contains the portables in the list 'new_v' expands to.
+ *  - The A register contains 'new_v_1' through 'new_v_M'.
  *  - The instruction register contains 'i'.
  *  - The top frame of the stack is removed. Then each 'push_i' is pushed to the
  *    stack, where 'push_1' is pushed last and becomes the new top of the
  *    stack.
  *  - 'o' is appended to the output buffer.
  *
+ * If a step uses the slow or the fast form, that step is called a slow step
+ * or a fast step, respectively.
+ *
  * Remarks:
  *
+ *  - In the fast form, nothing can be pushed to the stack.
  *  - An instruction can "call" itself by simply arranging that it is placed in
- *    the instruction register, immediately or at some later step. This does
- *    not cause a macro calling itself, because an instruction and its
- *    accompanying macro are different tokens.
+ *    the instruction register, either immediately (using the slow form) or at
+ *    some later step. This does not cause a macro calling itself, because an
+ *    instruction and its accompanying macro are different tokens.
  *  - Exactly one frame is popped from the stack in each step, whereas any
  *    number of frames can be pushed.
  *  - Stack popping is automatic, but you can cancel out the effect by pushing
@@ -126,8 +142,10 @@
  * Much of the strangeness of the machine's instruction interface comes from
  * efficiency requirements. In particular the current implementation ensures:
  *
- * - The content of the A register is scanned (by CPP) only twice per step.
- * - The content of the stack is scanned less than once in 10 steps on average.
+ * - The content of the A register is scanned (by CPP) only twice for a slow
+ *   step, and once for a fast step.
+ * - The content of the stack is scanned less than once in 10 slow steps on
+ *   average.
  * - Any part of the output buffer is scanned only O(log(steps)) times.
  */
 

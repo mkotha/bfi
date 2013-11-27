@@ -1,6 +1,7 @@
 # ifndef BFI_LEX_H
 # define BFI_LEX_H
 
+# include "machine.h"
 # include "util.h"
 
 /* BFI_LEX(src)
