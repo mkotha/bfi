@@ -372,7 +372,7 @@
 /* bf-cm instructions */
 
 # define BFI_FINST_6next(f, l, c, r, i, d, t) f(BFI_BF_NEXT(l, c, r) BFI_COMMA() i, t, BFI_RETURN
-# define BFI_FINST_6prev(f, l, c, r, i, d, t) f(BFI_BF_PREV(l, c, r) BFI_COMMA(), t, BFI_RETURN
+# define BFI_FINST_6prev(f, l, c, r, i, d, t) f(BFI_BF_PREV(l, c, r) BFI_COMMA() i, t, BFI_RETURN
 # define BFI_FINST_6next1(f, l, c, r, i, d, t) BFI_FINST_##t(f, BFI_CONS(c, l), BFI_HEAD(r), BFI_TAIL(r), i, BFI_EMPTY(
 # define BFI_FINST_6prev1(f, l, c, r, i, d, t) BFI_FINST_##t(f, BFI_TAIL(l), BFI_HEAD(l), BFI_CONS(c, r), i, BFI_EMPTY(
 
